@@ -36,6 +36,18 @@ streamlit run app.py
 
 A browser tab opens at `http://localhost:8501`. Drag a TravClan voucher in, verify, hit **Generate**, download.
 
+## Deploy on Streamlit Cloud
+
+The repo already contains `packages.txt` (system dependencies) and
+`requirements.txt` (Python dependencies), so a one-click deploy from
+GitHub works. Streamlit Cloud reads `packages.txt` before pip runs and
+installs the WeasyPrint + Tesseract system libraries. No additional
+configuration required.
+
+If the app crashes with `OSError: cannot load library 'libgobject-2.0-0'`
+or similar, verify `packages.txt` is at the repo root (not inside a
+subfolder) and reboot the app from the Streamlit Cloud dashboard.
+
 ## Project layout
 
 ```
