@@ -3,10 +3,7 @@ libpangoft2-1.0-0
 libpangocairo-1.0-0
 libharfbuzz0b
 libcairo2
-libcairo-gobject2
-libglib2.0-0
 libgdk-pixbuf-2.0-0
-libffi8
 shared-mime-info
 tesseract-ocr
 tesseract-ocr-eng
