@@ -1,0 +1,277 @@
+{
+  "trip": {
+    "booking_id": "INF-4613245",
+    "destination": "Vietnam",
+    "guest_lead": "JASH BHARAT JAIN",
+    "guest_lead_first": "JASH",
+    "travel_date_display": "05 Jun 2026",
+    "nights": 9,
+    "pax_display": "2 Adults",
+    "guests": [
+      "Mr Jash Bharat Jain",
+      "Mr Ronak Rajendra Jain"
+    ],
+    "arrival": {
+      "mode": "Flight",
+      "date": "05 Jun 2026",
+      "time": "05:25",
+      "remarks": "VN 972 · BOM → HAN"
+    },
+    "departure": {
+      "mode": "Flight",
+      "date": "14 Jun 2026",
+      "time": "08:05",
+      "remarks": "VJ 883 · SGN → BOM"
+    },
+    "hotels": [
+      {
+        "name": "Hanoi Lion Boutique Hotel",
+        "location": "Hanoi (Hoan Kiem District)",
+        "stars": 4,
+        "rooms_guests": "2 Rooms · 2 Adults",
+        "room_type": "Deluxe Internal Window",
+        "meal_plan": "Breakfast",
+        "check_in": "05 Jun 2026 · 14:00",
+        "check_out": "07 Jun 2026 · 12:00"
+      },
+      {
+        "name": "Mercure Danang French Village Bana Hills",
+        "location": "Danang",
+        "stars": 4,
+        "rooms_guests": "2 Rooms · 2 Adults",
+        "room_type": "Standard Room with King Bed",
+        "meal_plan": "Breakfast",
+        "check_in": "07 Jun 2026 · 14:00",
+        "check_out": "09 Jun 2026 · 12:00"
+      },
+      {
+        "name": "Vinholidays Fiesta Phu Quoc",
+        "location": "North Phu Quoc",
+        "stars": 4,
+        "rooms_guests": "2 Rooms · 2 Adults",
+        "room_type": "Studio Suite",
+        "meal_plan": "Breakfast",
+        "check_in": "09 Jun 2026 · 14:00",
+        "check_out": "12 Jun 2026 · 12:00"
+      },
+      {
+        "name": "Ciao Saigon Hotel & Spa",
+        "location": "Ho Chi Minh City (District 1)",
+        "stars": 3,
+        "rooms_guests": "2 Rooms · 2 Adults",
+        "room_type": "Suite Double with Window",
+        "meal_plan": "Breakfast",
+        "check_in": "12 Jun 2026 · 14:00",
+        "check_out": "14 Jun 2026 · 12:00"
+      }
+    ],
+    "days": [
+      {
+        "n": 1,
+        "date_display": "Fri, 05 Jun 2026",
+        "location": "Hanoi",
+        "stops": [
+          {
+            "title": "Arrival — Private Transfer (4-Seater)",
+            "pickup": "Noi Bai International Airport",
+            "pickup_time": "06:25",
+            "drop": "Hanoi Lion Boutique Hotel",
+            "remarks": "VN 972 · BOM–HAN · 05:25"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "date_display": "Sat, 06 Jun 2026",
+        "location": "Hanoi",
+        "stops": [
+          {
+            "title": "Halong Bay Day Trip — Omkara Cruise (Shared, 35-Seater Coach)",
+            "pickup": "Hanoi Lion Boutique Hotel",
+            "pickup_time": "07:30",
+            "description": "A full day on Halong Bay aboard the Omkara Cruise with Indian lunch. Covers Surprising Cave, Titop Island, and kayaking. Guide-accompanied group transfer."
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "date_display": "Sun, 07 Jun 2026",
+        "location": "Hanoi → Danang",
+        "stops": [
+          {
+            "title": "Departure Transfer — Private (4-Seater)",
+            "pickup": "Hanoi Lion Boutique Hotel",
+            "pickup_time": "09:10",
+            "drop": "Noi Bai International Airport",
+            "remarks": "VJ 515 · HAN–DAD · 12:10"
+          },
+          {
+            "title": "Arrival Transfer — Private",
+            "pickup": "Da Nang International Airport",
+            "pickup_time": "14:30",
+            "drop": "Mercure Danang French Village Bana Hills",
+            "remarks": "VJ 515 · HAN–DAD · 13:30"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "date_display": "Mon, 08 Jun 2026",
+        "location": "Bana Hills",
+        "leisure": true,
+        "stops": []
+      },
+      {
+        "n": 5,
+        "date_display": "Tue, 09 Jun 2026",
+        "location": "Danang → Phu Quoc",
+        "stops": [
+          {
+            "title": "Two-Way Transfer — Private (River Rafting & Zipline)",
+            "pickup": "Mercure Danang French Village Bana Hills",
+            "pickup_time": "07:30",
+            "remarks": "Round trip to Hoa Phu Thanh for rafting and zipline. Private transfers both ways."
+          },
+          {
+            "title": "Airport Transfer — Private",
+            "pickup": "Hoa Phu Thanh",
+            "pickup_time": "14:25",
+            "drop": "Da Nang International Airport",
+            "remarks": "VJ 717 · DAD–PQC · 17:25"
+          },
+          {
+            "title": "Arrival Transfer — Private",
+            "pickup": "Phu Quoc International Airport",
+            "pickup_time": "20:10",
+            "drop": "Vinholidays Fiesta Phu Quoc",
+            "remarks": "VJ 717 · DAD–PQC · 19:10"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "date_display": "Wed, 10 Jun 2026",
+        "location": "Phu Quoc",
+        "stops": [
+          {
+            "title": "VinWonders Phu Quoc + Vinpearl Safari — Entry Tickets (Private Transfer)",
+            "pickup": "Vinholidays Fiesta Phu Quoc",
+            "pickup_time": "08:00",
+            "remarks": "After the visit, guests are dropped back at the hotel. No tour guide.",
+            "description": "A full day across two of Phu Quoc's marquee attractions. VinWonders is Vietnam's largest theme park — rides, shows, water zones and a fantasy-castle centrepiece. Vinpearl Safari is a semi-wild sanctuary with tigers, lions, giraffes and rare Asian species across walking and driving zones.",
+            "thumbs": [
+              "samples/jash_thumbs/p3_i5_1080x1080.png",
+              "samples/jash_thumbs/p3_i6_1080x1080.png",
+              "samples/jash_thumbs/p3_i7_1080x1080.png"
+            ]
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "date_display": "Thu, 11 Jun 2026",
+        "location": "Phu Quoc",
+        "stops": [
+          {
+            "title": "4-Island Tour by Sharing Speedboat + Cable Car with Local Lunch",
+            "pickup": "Vinholidays Fiesta Phu Quoc",
+            "pickup_time": "07:30",
+            "description": "Speedboat cruise to Gam Ghi, May Rut, Buom and Thom islands with time on each for snorkelling and swimming. The Hon Thom cable car — one of the world's longest sea-crossings — is included.",
+            "thumbs": [
+              "samples/jash_thumbs/p4_i0_1080x1080.png",
+              "samples/jash_thumbs/p4_i1_1080x1080.png",
+              "samples/jash_thumbs/p4_i2_1080x1080.png"
+            ]
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "date_display": "Fri, 12 Jun 2026",
+        "location": "Phu Quoc → Ho Chi Minh",
+        "stops": [
+          {
+            "title": "Departure Transfer — Private (4-Seater)",
+            "pickup": "Vinholidays Fiesta Phu Quoc",
+            "pickup_time": "09:40",
+            "drop": "Phu Quoc International Airport",
+            "remarks": "VN 1830 · PQC–SGN · 12:40"
+          },
+          {
+            "title": "Arrival Transfer — Private",
+            "pickup": "Tan Son Nhat International Airport",
+            "pickup_time": "14:50",
+            "drop": "Ciao Saigon Hotel & Spa",
+            "remarks": "VN 1830 · PQC–SGN · 13:50"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "date_display": "Sat, 13 Jun 2026",
+        "location": "Ho Chi Minh City",
+        "stops": [
+          {
+            "title": "Full-Day Ho Chi Minh City Tour + Cu Chi Tunnels — Private",
+            "pickup": "Ciao Saigon Hotel & Spa",
+            "pickup_time": "08:00",
+            "remarks": "Guests are dropped back at the hotel after the tour.",
+            "description": "A full-day sweep of Ho Chi Minh City and the Cu Chi Tunnels. Reunification Palace, Notre Dame Cathedral, the War Remnants Museum, and the tunnel network used during the Vietnam War.",
+            "thumbs": [
+              "samples/jash_thumbs/p4_i8_1080x1080.png",
+              "samples/jash_thumbs/p4_i9_1080x1080.png",
+              "samples/jash_thumbs/p4_i10_1080x1080.png"
+            ]
+          },
+          {
+            "title": "Local Lunch During Tour (Tickets Only)",
+            "description": "A traditional Vietnamese lunch included as part of the day's tour."
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "date_display": "Sun, 14 Jun 2026",
+        "location": "Departure",
+        "stops": [
+          {
+            "title": "Departure Transfer — Private (4-Seater)",
+            "pickup": "Ciao Saigon Hotel & Spa",
+            "pickup_time": "04:05",
+            "drop": "Tan Son Nhat International Airport",
+            "remarks": "VJ 883 · SGN → BOM · 08:05"
+          }
+        ]
+      }
+    ],
+    "terms": [
+      "Transfers on the day of departure are as per the itinerary; onward day-use transfers are the guest's responsibility.",
+      "No refund will be issued for unutilised services.",
+      "Bed type is subject to availability at check-in.",
+      "A No-Show is treated as a 100% cancellation. Please be present at the pickup point on time.",
+      "Compulsory tipping in Vietnam: USD 3 per person per day (USD 1 for driver, USD 2 for guide). Paid on the ground.",
+      "Ticket pricing in Vietnam is based on the height of the guest: below 100 cm — free; 100–140 cm — child ticket; above 140 cm — adult ticket.",
+      "Some hotels may collect a refundable security deposit at check-in against incidentals.",
+      "Standard room availability is from 14:00 on arrival day until 12:00 on departure day. Early check-in / late check-out is subject to hotel availability and may incur a supplement.",
+      "Check-in / check-out timings and room sizes vary by hotel. Please refer to the hotel's own policy where relevant.",
+      "A driver surcharge applies for pickup/drop-off scheduled between 23:00 and 07:00.",
+      "ATMs across Vietnam widely accept Visa and Mastercard; Cirrus/Maestro is less common.",
+      "For visits to religious sites, dress modestly and follow local conventions.",
+      "A universal adapter or 3-pin plug is recommended.",
+      "SIC (shared) transfers are subject to +/- 30 min variance. The coach waits a maximum of 5 minutes at pickup.",
+      "Private transfer maximum wait time is 20 minutes; beyond this the transfer is treated as a No-Show.",
+      "Refunds cannot be processed for services already utilised.",
+      "The driver will carry all the sightseeing tickets included in your package.",
+      "Any additional charges levied by hotels (gala dinners, festive surcharges, resort fees) are the guest's responsibility and are payable directly at the hotel.",
+      "Activities scheduled on 25th, 30th, 31st Dec and 1st Jan are subject to operational feasibility and local regulations.",
+      "Passengers arriving at Tan Son Nhat International Airport (Ho Chi Minh City) must complete Vietnam's pre-arrival immigration form at <a href=\"https://prearrival.immigration.gov.vn/\">prearrival.immigration.gov.vn</a> before departure and present the QR code on arrival."
+    ]
+  },
+  "contacts": {
+    "advisor":          "Danish Khan",
+    "on_ground_name":   "Nguyen Trung Kien",
+    "on_ground_phone":  "+84 90 234 5678",
+    "emergency":        "+91 95133 92429",
+    "careline":         "+91 88000 25030"
+  }
+}

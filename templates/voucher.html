@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Alike Voucher — {{ trip.guest_lead }} — {{ trip.destination }}</title>
+<style>
+@font-face { font-family: 'Poppins'; font-weight: 400; src: url('{{ font_dir }}/Poppins-Regular.ttf'); }
+@font-face { font-family: 'Poppins'; font-weight: 500; src: url('{{ font_dir }}/Poppins-Medium.ttf'); }
+@font-face { font-family: 'Poppins'; font-weight: 600; src: url('{{ font_dir }}/Poppins-SemiBold.ttf'); }
+@font-face { font-family: 'Poppins'; font-weight: 700; src: url('{{ font_dir }}/Poppins-Bold.ttf'); }
+
+@page { size: A4; margin: 12mm 0 12mm 0; }
+@page :first { margin: 0 0 12mm 0; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: 'Poppins', sans-serif; color: {{ ink }}; font-size: 9.5pt; line-height: 1.4; }
+body { padding: 0; }
+
+/* --- reusable --- */
+.wrap { padding: 0 14mm; }
+.orange-bar { height: 4mm; width: 100%; background: {{ orange }}; }
+h2 { font-size: 12pt; font-weight: 700; color: {{ ink }}; margin-bottom: 3mm; padding-bottom: 2mm; border-bottom: 1.5pt solid {{ ink }}; letter-spacing: 0.2pt; }
+.muted { color: #666; font-size: 8.5pt; }
+.strong { font-weight: 600; }
+
+/* --- page-1 hero (bleeds to top; side margins already 0 via @page :first) --- */
+.hero {
+  background: linear-gradient(135deg, {{ grad1 }} 0%, {{ grad2 }} 55%, {{ grad3 }} 100%);
+  color: #fff;
+  padding: 14mm 14mm 12mm 14mm;
+}
+.hero .masthead { display: table; width: 100%; margin-bottom: 8mm; }
+.hero .masthead .lg-cell { display: table-cell; vertical-align: middle; width: 55mm; }
+.hero .masthead .ref-cell { display: table-cell; vertical-align: middle; text-align: right; color: #fff; font-size: 9pt; }
+.hero .masthead img { height: 12mm; }
+.hero h1 { font-size: 22pt; font-weight: 700; line-height: 1.15; margin-bottom: 2mm; }
+.hero h1 .subtle { font-weight: 400; opacity: 0.9; font-size: 15pt; display: block; }
+.hero .destination-chip { display: inline-block; padding: 1.8mm 5mm; background: rgba(255,255,255,0.28); border: 0.5pt solid rgba(255,255,255,0.4); border-radius: 20mm; font-size: 9pt; font-weight: 500; margin-top: 3mm; margin-right: 2mm; }
+
+/* --- booking box --- */
+.booking-box {
+  border: 1pt solid #d6d6d6; border-radius: 3mm; padding: 5mm; margin-top: 6mm;
+}
+.booking-box table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.booking-box td { padding: 1.2mm 0; font-size: 9.5pt; vertical-align: top; }
+.booking-box td.label { color: #666; width: 32mm; }
+.booking-box td.value { font-weight: 600; color: {{ ink }}; }
+.booking-box td.right { text-align: right; }
+
+/* --- emergency + support strip --- */
+.support-strip {
+  margin-top: 5mm; padding: 4mm 5mm;
+  background: #fff7f2; border: 1pt solid #fadfcf; border-radius: 3mm;
+}
+.support-strip table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.support-strip td { vertical-align: top; padding: 0 3mm; font-size: 8.8pt; }
+.support-strip .label { color: #8a4b2b; font-size: 7.5pt; letter-spacing: 0.5pt; text-transform: uppercase; font-weight: 600; margin-bottom: 0.8mm; display: block; }
+.support-strip .value { font-weight: 600; color: {{ ink }}; }
+
+/* --- section blocks --- */
+.section { margin-top: 7mm; break-inside: avoid; }
+.section-lead { margin-top: 7mm; page-break-inside: avoid; }
+.section-lead .lead-block { break-inside: avoid; }
+
+/* guest list */
+.guest-list { padding-left: 5mm; }
+.guest-list li { list-style: decimal; margin: 0.5mm 0; font-size: 9.5pt; }
+
+/* arrival/departure two-column via table (safer than flex near page-end) */
+.ad-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ad-table td { width: 50%; vertical-align: top; padding-right: 6mm; }
+.ad-cell .h { font-weight: 700; font-size: 10pt; color: {{ ink }}; margin-bottom: 1mm; }
+.ad-cell .m { font-size: 9pt; color: #444; }
+.ad-cell .r { font-size: 8.5pt; color: #666; margin-top: 1mm; }
+.ad-cell .marker { display: inline-block; width: 2.5mm; height: 2.5mm; background: {{ orange }}; border-radius: 0.5mm; margin-right: 2mm; vertical-align: middle; }
+
+/* HOTELS — single-row table per card so nothing splits */
+table.hotel-card { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 4mm; break-inside: avoid; }
+table.hotel-card td { vertical-align: top; padding: 0; }
+table.hotel-card td.thumb { width: 72mm; padding-right: 5mm; }
+table.hotel-card td.thumb img { width: 70mm; height: 45mm; object-fit: cover; border-radius: 2.5mm; display: block; }
+table.hotel-card td.thumb.noimg { width: 0; padding-right: 0; }
+table.hotel-card td.body .name { font-size: 11pt; font-weight: 700; color: {{ ink }}; }
+table.hotel-card td.body .loc  { font-size: 8.5pt; color: #666; margin: 0.5mm 0 2mm 0; }
+table.hotel-card td.body .loc .pin { display: inline-block; width: 1.6mm; height: 1.6mm; border-radius: 50%; background: {{ orange }}; vertical-align: middle; margin-right: 1.2mm; }
+table.hotel-card td.body .row  { font-size: 9pt; margin: 0.4mm 0; }
+table.hotel-card td.body .row .k { color: #666; display: inline-block; min-width: 26mm; }
+table.hotel-card td.body .row .v { font-weight: 600; color: {{ ink }}; }
+table.hotel-card td.dates { width: 52mm; text-align: right; }
+table.hotel-card td.dates .d { font-size: 8.8pt; margin: 0.3mm 0; }
+table.hotel-card td.dates .d .k { color: #666; }
+table.hotel-card td.dates .d .v { color: {{ ink }}; font-weight: 600; }
+
+/* day-lead: one break-inside:avoid table that holds day-header + first
+   stop-card. This is the widow-proof unit — the day chip can never
+   appear at the bottom of a page without at least its first stop. */
+table.day-lead { width: 100%; border-collapse: collapse; margin: 0; break-inside: avoid; }
+table.day-lead td { padding: 0; vertical-align: top; }
+.day-header { margin-top: 5mm; }
+.day-header .chip {
+  display: inline-block; background: linear-gradient(135deg, {{ grad1 }}, {{ grad2 }});
+  color: #fff; padding: 1mm 4mm; border-radius: 20mm; font-size: 9pt; font-weight: 600;
+}
+.day-header .date { display: inline-block; margin-left: 3mm; font-size: 9pt; color: #666; }
+.day-header .divider { border-top: 1pt dashed #d6d6d6; margin-top: 2mm; }
+
+table.stop-card { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 2mm 0 4mm 0; break-inside: avoid; }
+table.stop-card td { vertical-align: top; padding: 0; }
+table.stop-card td.title { padding-bottom: 1.5mm; }
+table.stop-card .title-txt { font-size: 10pt; font-weight: 700; color: {{ ink }}; }
+table.stop-card td.pd { width: 50%; padding-right: 4mm; font-size: 8.8pt; padding-bottom: 0.8mm; }
+table.stop-card td.pd .k { color: {{ orange }}; font-weight: 600; letter-spacing: 0.3pt; text-transform: uppercase; font-size: 7.5pt; display: block; margin-bottom: 0.5mm; }
+table.stop-card td.pd .v { color: {{ ink }}; }
+table.stop-card td.remarks { font-size: 8.5pt; color: #666; padding-top: 1mm; }
+table.stop-card td.desc { font-size: 8.8pt; color: #444; padding-top: 1.5mm; line-height: 1.5; }
+
+/* activity thumbnail row (46x31 mm, uniform frame, per SOP) */
+.thumbs { margin-top: 2mm; break-inside: avoid; }
+.thumbs table { border-collapse: collapse; }
+.thumbs td { padding: 0 2mm 0 0; }
+.thumbs img { width: 46mm; height: 31mm; object-fit: cover; border-radius: 1.5mm; display: block; }
+
+/* GOOD-TO-KNOW / T&C */
+.terms { font-size: 8.5pt; line-height: 1.5; }
+.terms ul { padding-left: 5mm; }
+.terms li { margin: 0.8mm 0; break-inside: avoid; }
+
+/* FOOTER — full bleed dark band via negative margins wrapper */
+.footer-wrap { margin-top: 8mm; break-inside: avoid; }
+.footer {
+  background: linear-gradient(135deg, {{ grad1 }} 0%, {{ grad2 }} 55%, {{ grad3 }} 100%);
+  color: #fff; padding: 10mm 14mm 8mm 14mm;
+}
+.footer .row1 { display: table; width: 100%; margin-bottom: 6mm; }
+.footer .row1 .l { display: table-cell; vertical-align: middle; width: 55%; }
+.footer .row1 .r { display: table-cell; vertical-align: middle; text-align: right; }
+.footer .row1 img.flogo { height: 11mm; }
+.footer .row1 .thanks { font-size: 14pt; font-weight: 600; line-height: 1.3; }
+.footer .row1 .thanks .sub { font-size: 9pt; opacity: 0.9; font-weight: 400; display: block; margin-top: 1mm; }
+
+.footer .offices { display: table; width: 100%; margin-bottom: 6mm; border-top: 0.5pt solid rgba(255,255,255,0.3); padding-top: 5mm; }
+.footer .offices .off { display: table-cell; width: 33.33%; padding-right: 5mm; font-size: 7.8pt; line-height: 1.5; vertical-align: top; }
+.footer .offices .off .country { font-weight: 700; font-size: 8.5pt; margin-bottom: 1mm; letter-spacing: 0.3pt; }
+
+.footer .contact { display: table; width: 100%; margin-bottom: 5mm; font-size: 8.5pt; }
+.footer .contact .c { display: table-cell; width: 33.33%; vertical-align: middle; }
+.footer .contact .c .k { opacity: 0.75; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5pt; display: block; margin-bottom: 0.5mm; }
+.footer .contact .c .v { font-weight: 600; }
+.footer .contact .c a { color: #fff; text-decoration: none; font-weight: 600; }
+
+.footer .social { border-top: 0.5pt solid rgba(255,255,255,0.3); padding-top: 5mm; display: table; width: 100%; }
+.footer .social .prompt { display: table-cell; font-size: 8.5pt; vertical-align: middle; }
+.footer .social .prompt .r { display: block; font-size: 8pt; opacity: 0.85; margin-top: 1mm; }
+.footer .social .icons { display: table-cell; text-align: right; vertical-align: middle; }
+.footer .social .icons a { display: inline-block; margin-left: 3mm; width: 8mm; height: 8mm; border-radius: 50%; background: rgba(255,255,255,0.15); text-align: center; line-height: 8mm; font-size: 8pt; color: #fff; text-decoration: none; font-weight: 700; }
+
+/* activity/tour block wrappers */
+.stop-block { break-inside: avoid; margin: 1mm 0 3mm 0; }
+</style>
+</head>
+<body>
+
+{# ============= PAGE 1 HERO ============= #}
+<div class="hero">
+  <div class="masthead">
+    <div class="lg-cell">
+      <img src="{{ logo_white }}" alt="Alike">
+    </div>
+    <div class="ref-cell">
+      <div style="opacity:0.85;font-size:8pt;letter-spacing:0.5pt;">BOOKING VOUCHER</div>
+      <div style="font-size:11pt;font-weight:600;margin-top:0.5mm;">{{ trip.booking_id }}</div>
+    </div>
+  </div>
+  <h1>
+    <span class="subtle">{{ trip.guest_lead_first }}'s</span>
+    {{ trip.destination }} Trip
+  </h1>
+  <div>
+    <span class="destination-chip">{{ trip.nights }} Nights</span>
+    <span class="destination-chip">{{ trip.travel_date_display }}</span>
+    <span class="destination-chip">{{ trip.pax_display }}</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  {# --- booking box --- #}
+  <div class="booking-box">
+    <table>
+      <tr>
+        <td class="label">Booking ID</td>
+        <td class="value">{{ trip.booking_id }}</td>
+        <td class="label right" style="width:32mm;">Travel Date</td>
+        <td class="value right">{{ trip.travel_date_display }}</td>
+      </tr>
+      <tr>
+        <td class="label">Destination</td>
+        <td class="value">{{ trip.destination }}</td>
+        <td class="label right">No. of Nights</td>
+        <td class="value right">{{ trip.nights }} Nights</td>
+      </tr>
+      <tr>
+        <td class="label">Pax</td>
+        <td class="value" colspan="3">{{ trip.pax_display }}</td>
+      </tr>
+    </table>
+  </div>
+
+  {# --- support strip (emergency + careline + on-ground) --- #}
+  <div class="support-strip">
+    <table>
+      <tr>
+        <td>
+          <span class="label">24×7 Emergency</span>
+          <span class="value">{{ contacts.emergency }}</span>
+        </td>
+        <td>
+          <span class="label">Careline (WhatsApp)</span>
+          <span class="value"><a href="https://api.whatsapp.com/send?phone=918800025030" style="color:{{ ink }};text-decoration:none;">{{ contacts.careline }}</a></span>
+        </td>
+        <td>
+          <span class="label">On-Ground Support</span>
+          <span class="value">{{ contacts.on_ground_name }}{% if contacts.on_ground_phone %} · {{ contacts.on_ground_phone }}{% endif %}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  {# --- guest list --- #}
+  <div class="section">
+    <h2>Guest Details</h2>
+    <ol class="guest-list">
+      {% for g in trip.guests %}<li>{{ g }}</li>{% endfor %}
+    </ol>
+  </div>
+
+  {# --- arrival & departure --- #}
+  {% if trip.arrival or trip.departure %}
+  <div class="section">
+    <h2>Arrival &amp; Departure</h2>
+    <table class="ad-table">
+      <tr>
+        {% if trip.arrival %}
+        <td class="ad-cell">
+          <div class="h"><span class="marker"></span>Arrival — {{ trip.arrival.mode }}</div>
+          <div class="m">{{ trip.arrival.date }}{% if trip.arrival.time %} · {{ trip.arrival.time }}{% endif %}</div>
+          {% if trip.arrival.remarks %}<div class="r">{{ trip.arrival.remarks }}</div>{% endif %}
+        </td>
+        {% else %}<td></td>{% endif %}
+        {% if trip.departure %}
+        <td class="ad-cell">
+          <div class="h"><span class="marker"></span>Departure — {{ trip.departure.mode }}</div>
+          <div class="m">{{ trip.departure.date }}{% if trip.departure.time %} · {{ trip.departure.time }}{% endif %}</div>
+          {% if trip.departure.remarks %}<div class="r">{{ trip.departure.remarks }}</div>{% endif %}
+        </td>
+        {% else %}<td></td>{% endif %}
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+
+  {# --- hotels --- #}
+  {% if trip.hotels %}
+  <div class="section">
+    <h2>Where You'll Stay</h2>
+    {% for h in trip.hotels %}
+    <table class="hotel-card">
+      <tr>
+        {% if h.thumb %}
+        <td class="thumb"><img src="{{ h.thumb }}" alt=""></td>
+        {% else %}
+        <td class="thumb noimg"></td>
+        {% endif %}
+        <td class="body">
+          <div class="name">{{ h.name }}</div>
+          <div class="loc"><span class="pin"></span> {{ h.location }}{% if h.stars %} · {{ '★' * h.stars }}{% endif %}</div>
+          <div class="row"><span class="k">Rooms &amp; Guests</span> <span class="v">{{ h.rooms_guests }}</span></div>
+          <div class="row"><span class="k">Room Type</span> <span class="v">{{ h.room_type }}</span></div>
+          <div class="row"><span class="k">Meal Plan</span> <span class="v">{{ h.meal_plan }}</span></div>
+          {% if h.confirmation %}<div class="row"><span class="k">Confirmation</span> <span class="v">{{ h.confirmation }}</span></div>{% endif %}
+        </td>
+        <td class="dates">
+          <div class="d"><span class="k">Check-in</span><br><span class="v">{{ h.check_in }}</span></div>
+          <div class="d" style="margin-top:2mm;"><span class="k">Check-out</span><br><span class="v">{{ h.check_out }}</span></div>
+        </td>
+      </tr>
+    </table>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# --- itinerary --- #}
+  {% if trip.days %}
+  <div class="section">
+    <h2>Day-by-Day Itinerary</h2>
+    {% for day in trip.days %}
+    <div class="day-group">
+      {# lead-unit: day-header + first stop in ONE break-inside:avoid block #}
+      <table class="day-lead"><tr><td>
+        <div class="day-header">
+          <span class="chip">Day {{ day.n }}</span>
+          <span class="date">{{ day.date_display }}{% if day.location %} · {{ day.location }}{% endif %}</span>
+          <div class="divider"></div>
+        </div>
+        {% if day.leisure %}
+        <div style="font-size:9.5pt;color:#666;font-style:italic;padding:2mm 0;">Enjoy your day at leisure.</div>
+        {% endif %}
+        {% if day.stops and day.stops[0] %}
+          {% set stop = day.stops[0] %}
+          <table class="stop-card">
+            <tr><td class="title" colspan="2"><span class="title-txt">{{ stop.title }}</span></td></tr>
+            <tr>
+              {% if stop.pickup %}
+              <td class="pd"><span class="k">Pickup from</span><span class="v">{{ stop.pickup }}{% if stop.pickup_time %} · {{ stop.pickup_time }}{% endif %}</span></td>
+              {% else %}<td class="pd"></td>{% endif %}
+              {% if stop.drop %}
+              <td class="pd"><span class="k">Drop at</span><span class="v">{{ stop.drop }}{% if stop.drop_time %} · {{ stop.drop_time }}{% endif %}</span></td>
+              {% else %}<td class="pd"></td>{% endif %}
+            </tr>
+            {% if stop.remarks %}<tr><td class="remarks" colspan="2">Remarks: {{ stop.remarks }}</td></tr>{% endif %}
+            {% if stop.description %}<tr><td class="desc" colspan="2">{{ stop.description }}</td></tr>{% endif %}
+            {% if stop.thumbs %}
+            <tr><td colspan="2">
+              <div class="thumbs"><table><tr>
+                {% for t in stop.thumbs %}<td><img src="{{ t }}" alt=""></td>{% endfor %}
+              </tr></table></div>
+            </td></tr>
+            {% endif %}
+          </table>
+        {% endif %}
+      </td></tr></table>
+      {# subsequent stops render individually below #}
+      {% for stop in day.stops[1:] %}
+      <table class="stop-card">
+        <tr><td class="title" colspan="2"><span class="title-txt">{{ stop.title }}</span></td></tr>
+        <tr>
+          {% if stop.pickup %}
+          <td class="pd"><span class="k">Pickup from</span><span class="v">{{ stop.pickup }}{% if stop.pickup_time %} · {{ stop.pickup_time }}{% endif %}</span></td>
+          {% else %}<td class="pd"></td>{% endif %}
+          {% if stop.drop %}
+          <td class="pd"><span class="k">Drop at</span><span class="v">{{ stop.drop }}{% if stop.drop_time %} · {{ stop.drop_time }}{% endif %}</span></td>
+          {% else %}<td class="pd"></td>{% endif %}
+        </tr>
+        {% if stop.remarks %}<tr><td class="remarks" colspan="2">Remarks: {{ stop.remarks }}</td></tr>{% endif %}
+        {% if stop.description %}<tr><td class="desc" colspan="2">{{ stop.description }}</td></tr>{% endif %}
+        {% if stop.thumbs %}
+        <tr><td colspan="2">
+          <div class="thumbs"><table><tr>
+            {% for t in stop.thumbs %}<td><img src="{{ t }}" alt=""></td>{% endfor %}
+          </tr></table></div>
+        </td></tr>
+        {% endif %}
+      </table>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# --- good to know / T&Cs --- #}
+  {% if trip.terms %}
+  <div class="section">
+    <h2>Good to Know &amp; Terms</h2>
+    <div class="terms">
+      <ul>
+        {% for t in trip.terms %}<li>{{ t|safe }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# --- footer (full-bleed dark) --- #}
+<div class="footer-wrap">
+  <div class="footer">
+    <div class="row1">
+      <div class="l">
+        <img src="{{ logo_white_transparent }}" class="flogo" alt="Alike">
+      </div>
+      <div class="r">
+        <div class="thanks">Have a wonderful trip!<span class="sub">Team Alike is with you every mile of the way.</span></div>
+      </div>
+    </div>
+
+    <div class="offices">
+      <div class="off">
+        <div class="country">India</div>
+        3rd Floor, DT Mega Mall,<br>Golf Course Road, A Block,<br>DLF Phase 1, Gurugram,<br>Haryana – 122022
+      </div>
+      <div class="off">
+        <div class="country">United Arab Emirates</div>
+        Dubai Airport Terminal 3<br>Arrivals, PO Box 19097,<br>Dubai, UAE
+      </div>
+      <div class="off">
+        <div class="country">United Kingdom</div>
+        G12, Reading Enterprise Centre,<br>Whiteknights Road, Reading,<br>Berkshire, RG6 6BU, England
+      </div>
+    </div>
+
+    <div class="contact">
+      <div class="c">
+        <span class="k">Travel Advisor</span>
+        <span class="v">{{ contacts.advisor }}</span>
+      </div>
+      <div class="c">
+        <span class="k">Email</span>
+        <span class="v"><a href="mailto:care@alike.io">care@alike.io</a></span>
+      </div>
+      <div class="c">
+        <span class="k">Website</span>
+        <span class="v"><a href="https://alike.io">alike.io</a></span>
+      </div>
+    </div>
+
+    <div class="social">
+      <div class="prompt">
+        <strong>Enjoyed your trip?</strong> Share the love →
+        <span class="r"><a href="https://share.google/wRBJeL47iJj0wKk9A" style="color:#fff;text-decoration:underline;">Leave us a Google review</a></span>
+      </div>
+      <div class="icons">
+        <a href="https://api.whatsapp.com/send?phone=918800025030" title="WhatsApp">WA</a>
+        <a href="https://x.com/travelwithalike" title="X">X</a>
+        <a href="https://www.instagram.com/travelwithalike/" title="Instagram">IG</a>
+        <a href="https://www.facebook.com/travelwithalike/" title="Facebook">FB</a>
+        <a href="https://www.youtube.com/@travelwithalike" title="YouTube">YT</a>
+        <a href="https://www.linkedin.com/company/travelwithalike/" title="LinkedIn">IN</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
