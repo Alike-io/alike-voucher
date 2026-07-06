@@ -13,6 +13,9 @@ DESTINATION_GRADIENTS = {
     "thailand":  ("#0a3d62", "#1e7898", "#2bb3c0"),
     "sri lanka": ("#053b3a", "#0f7d6e", "#20b59a"),
     "singapore": ("#06234d", "#0e5a8a", "#1f8f86"),
+    "dubai":     ("#2b1810", "#7a4a24", "#c8944a"),
+    "uae":       ("#2b1810", "#7a4a24", "#c8944a"),
+    "maldives":  ("#04324a", "#0e6b8f", "#2ba0b5"),
     # sensible default for anything else
     "default":   ("#0a2540", "#155a80", "#1e88a8"),
 }

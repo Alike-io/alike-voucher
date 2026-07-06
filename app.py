@@ -49,6 +49,10 @@ if "compliance" not in st.session_state:
     st.session_state["compliance"] = (None, [])
 
 
+if "ocr_raw" not in st.session_state:
+    st.session_state["ocr_raw"] = []
+
+
 # --- step 1: upload ----------------------------------------------------
 
 with st.container(border=True):
@@ -64,17 +68,36 @@ with st.container(border=True):
             st.caption(f"Ready: **{uploaded.name}** ({uploaded.size/1024:.0f} KB)")
 
     if run_ocr and uploaded:
-        with st.spinner("OCR-ing pages at 300 DPI and parsing the structure…"):
+        with st.spinner("OCR-ing pages at 300 DPI, extracting thumbnails, and parsing…"):
             with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
                 tf.write(uploaded.read())
                 tmp_path = tf.name
+            # Persistent thumb dir so the renderer can reference the paths later
+            thumb_dir = tempfile.mkdtemp(prefix="alike_thumbs_")
+            st.session_state["thumb_dir"] = thumb_dir
             try:
-                data = extract(tmp_path)
+                data = extract(tmp_path, thumb_dir=thumb_dir)
                 st.session_state["warnings"] = data.pop("_ocr_warnings", [])
-                data.pop("_ocr_pages_raw", None)
+                st.session_state["ocr_raw"]  = data.pop("_ocr_pages_raw", [])
                 st.session_state["data"] = data
                 st.session_state["pdf_bytes"] = None
-                st.success("OCR complete — verify the fields below.")
+                # Alert if extraction is essentially empty
+                t = data["trip"]
+                empty = (not t.get("booking_id") and not t.get("hotels")
+                         and not t.get("days") and not t.get("arrival"))
+                total_thumbs = sum(len(s.get("thumbs", []))
+                                   for d in t.get("days", [])
+                                   for s in d.get("stops", []))
+                if empty:
+                    st.error("OCR ran, but no TravClan voucher fields were detected. "
+                             "This may not be a standard TravClan booking voucher. "
+                             "Expand **Show raw OCR text** below to see what OCR captured, "
+                             "and share the source PDF with the tool owner to teach the "
+                             "parser this format.")
+                else:
+                    st.success(f"OCR complete — {len(t.get('days',[]))} days, "
+                               f"{len(t.get('hotels',[]))} hotels, "
+                               f"{total_thumbs} thumbnails extracted. Verify the fields below.")
             except Exception as e:
                 st.error(f"OCR failed: {e}")
                 st.code(traceback.format_exc())
@@ -93,6 +116,18 @@ if st.session_state["warnings"]:
         st.warning("OCR left these fields for you to confirm:")
         for w in st.session_state["warnings"]:
             st.write(f"• {w}")
+
+# Raw OCR debug — always available after a run
+if st.session_state.get("ocr_raw"):
+    with st.expander("🔍 Show raw OCR text (per page)", expanded=False):
+        st.caption("This is what Tesseract read off the pages. If your fields "
+                   "aren't populated above, check whether the text is here — if "
+                   "yes, the parser needs to learn this voucher format; if no, "
+                   "the source PDF may be scanned poorly or in a language OCR "
+                   "isn't tuned for.")
+        for i, page_text in enumerate(st.session_state["ocr_raw"], 1):
+            st.markdown(f"**Page {i}**")
+            st.code(page_text or "(no text detected)", language=None)
 
 
 # --- step 2: verify + edit ---------------------------------------------

@@ -30,6 +30,36 @@ def ocr_pdf(pdf_path: str, dpi: int = 300) -> List[str]:
     return pages
 
 
+def extract_embedded_images(pdf_path: str, out_dir: str, min_side: int = 200) -> List[dict]:
+    """Extract embedded activity/hotel thumbnails from the source PDF.
+
+    Returns [{page, index, path, width, height}]. Skips tiny decorative
+    images (icons, app-badges) via the min_side threshold — real thumbs
+    are usually ≥300px on the short side, decorative icons are ≤150px.
+    """
+    import os
+    os.makedirs(out_dir, exist_ok=True)
+    saved = []
+    doc = fitz.open(pdf_path)
+    for page_num, page in enumerate(doc, 1):
+        for img_i, img in enumerate(page.get_images(full=True)):
+            xref = img[0]
+            pix = fitz.Pixmap(doc, xref)
+            if pix.n - pix.alpha > 3:
+                pix = fitz.Pixmap(fitz.csRGB, pix)
+            if pix.width < min_side or pix.height < min_side:
+                pix = None
+                continue
+            fname = f"p{page_num}_i{img_i}_{pix.width}x{pix.height}.png"
+            fpath = os.path.join(out_dir, fname)
+            pix.save(fpath)
+            saved.append({"page": page_num, "index": img_i,
+                          "path": fpath, "width": pix.width, "height": pix.height})
+            pix = None
+    doc.close()
+    return saved
+
+
 # --- helpers -----------------------------------------------------------
 
 MONTHS = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*"
@@ -57,7 +87,11 @@ def parse_booking_meta(text: str) -> dict:
     d["destination"]       = _first(r"Destination[:\s]+([A-Za-z /]+?)(?:\n|Pax|$)", text)
     d["pax"]               = _first(r"Pax[:\s]+(\d+\s*Adult(?:s)?(?:\s*[|,]\s*\d+\s*Child(?:ren)?)?)", text)
 
-    m = re.search(r"([A-Z][A-Z\s]{2,})'s\s+[A-Z][a-z]+", text)
+    # Guest lead: matches "MAYANK's Vietnam Trip" (all caps), "Mayank's..."
+    # (title case), "Jash Bharat's..." (multi-word title), or
+    # "Nilesh's Bali / Indonesia Trip" (destination with slash).
+    m = re.search(r"([A-Z][a-zA-Z][a-zA-Z\s]{1,30})'s\s+[A-Za-z][A-Za-z\s/]{1,40}?\s+Trip",
+                  text)
     if m:
         d["guest_lead"] = _clean(m.group(1)).title()
     return d
@@ -246,78 +280,243 @@ def parse_days(text: str) -> List[dict]:
 
 
 def _parse_day_stops(chunk: str) -> List[dict]:
-    stops = []
-    pickup_positions = [m.start() for m in re.finditer(r"Pickup\s*from", chunk, re.IGNORECASE)]
-    if not pickup_positions:
-        title = _first(r"^\s*([A-Z][^\n]{5,150})$", chunk, re.MULTILINE)
-        if title:
-            stops.append({"title": _clean(title)})
-        return stops
+    """Every stop in TravClan itineraries has a title line ending with
+    ' | PRIVATE', ' | SIC', ' | TICKETS ONLY', etc. Anchor on those.
 
-    prev_end = 0
-    for j, pos in enumerate(pickup_positions):
-        next_pos = pickup_positions[j+1] if j+1 < len(pickup_positions) else len(chunk)
-        title_region = chunk[prev_end:pos]
-        title_candidates = [l.strip() for l in title_region.split("\n") if l.strip()]
-        title = ""
-        for l in reversed(title_candidates):
-            if l.startswith("Remarks") or "Pickup" in l or "Drop at" in l:
+    A stop block runs from its title line to the next title line (or the
+    end of the day chunk). Inside a block we look for optional Pickup +
+    Drop, optional Remarks, and any descriptive prose."""
+    STOP_TYPE = r"PRIVATE|SIC|TICKETS\s*ONLY|SEAT[\s\-]IN[\s\-]COACH"
+    title_re = re.compile(rf"^([^\n]+?)\s*\|\s*({STOP_TYPE})[^\n]*$",
+                          re.MULTILINE | re.IGNORECASE)
+    matches = list(title_re.finditer(chunk))
+    if not matches:
+        return []
+
+    stops = []
+    for i, m in enumerate(matches):
+        title = _clean(m.group(1))
+        stop_type = m.group(2).upper()
+        # If title starts with junk (e.g. leading "| " from OCR of divider),
+        # strip it
+        title = re.sub(r"^[^\w]+", "", title).strip()
+        if not title:
+            continue
+
+        # Everything from end-of-title to next title (or end of chunk)
+        body_start = m.end()
+        body_end = matches[i+1].start() if i+1 < len(matches) else len(chunk)
+        body = chunk[body_start:body_end]
+
+        # Pickup + Drop on one line looks like:
+        #   "Pickup from: X ay Drop at: Y"
+        # OCR of the car icon between them varies (ay, fay, =, >, ~). Split
+        # on 'Drop at' to isolate pickup value; strip trailing icon glyphs.
+        pickup = None
+        drop = None
+        pickup_time = None
+        pd_line = re.search(r"Pickup\s*from[:\s]+([^\n]+)", body, re.IGNORECASE)
+        if pd_line:
+            raw = pd_line.group(1)
+            drop_split = re.split(r"\s+\S{0,4}\s*Drop\s*at[:\s]+", raw, maxsplit=1, flags=re.IGNORECASE)
+            if len(drop_split) == 2:
+                pickup = re.sub(r"[^\w\)]+$", "", drop_split[0]).strip()
+                drop   = _clean(drop_split[1])
+            else:
+                pickup = re.sub(r"[^\w\)]+$", "", raw).strip()
+        # Sometimes Drop is on its own line
+        if not drop:
+            drop_line = re.search(r"Drop\s*at[:\s]+([^\n]+)", body, re.IGNORECASE)
+            if drop_line:
+                drop = _clean(drop_line.group(1))
+
+        # Pickup time
+        pt = re.search(r"Pickup\s*time\s*-\s*([^\n]+)", body, re.IGNORECASE)
+        if pt:
+            pickup_time = _clean(pt.group(1))
+
+        # Remarks (single line following)
+        rmk = re.search(r"Remarks:\s*([^\n]+)", body, re.IGNORECASE)
+        remarks = _clean(rmk.group(1)) if rmk else None
+
+        # Description = first prose paragraph after title/pickup/remarks that
+        # isn't itself Remarks/Pickup/Drop (even if it starts with an OCR
+        # icon glyph like em-dash from the car symbol).
+        desc = None
+        paras = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
+        for para in paras:
+            if re.search(r"\b(Pickup\s*from|Drop\s*at|Pickup\s*time)\b", para, re.IGNORECASE):
                 continue
-            if len(l) < 6:
+            if re.match(r"^\s*Remarks\b", para, re.IGNORECASE):
                 continue
-            if re.fullmatch(r"[^\w]+", l):
+            if len(para) < 40:
                 continue
-            title = re.sub(r"^[^\w\d]+", "", l)
-            title = re.sub(r"\s*\|\s*\d+\s*Cab\(?s?\)?\s*$", "", title)
-            title = _clean(title)
+            desc = _clean(para)
             break
 
-        sub = chunk[pos:next_pos]
-        pickup = _first(r"Pickup\s*from[:\s]+([^\n]+?)(?:\s{2,}(?:ay|=|>|\S)\s*Drop\s*at|$)", sub) \
-              or _first(r"Pickup\s*from[:\s]+([^\n]+)", sub)
-        drop   = _first(r"Drop\s*at[:\s]+([^\n]+)", sub)
-        if pickup: pickup = re.sub(r"\s+[^\w]+$", "", pickup).strip()
-        if drop:   drop   = re.sub(r"\s+[^\w]+$", "", drop).strip()
-
-        pickup_time = _first(r"Pickup\s*time\s*-\s*([^\n]+)", sub)
-        remarks     = _first(r"Remarks:\s*([^\n]+)", sub)
-
-        desc = None
-        # Grab prose paragraphs after Remarks (or after Pickup time)
-        anchor_match = re.search(r"(?:Remarks:[^\n]+|Pickup\s*time[^\n]+)\n\s*\n([A-Z][^\n]{40,}(?:\n[^\n]+)*?)(?=\n\s*\n|\Z)",
-                                  sub, re.DOTALL)
-        if anchor_match:
-            desc = _clean(anchor_match.group(1))
-
         stop = {"title": title}
-        if pickup: stop["pickup"] = _clean(pickup)
-        if pickup_time: stop["pickup_time"] = _clean(pickup_time)
-        if drop: stop["drop"] = _clean(drop)
-        if remarks: stop["remarks"] = _clean(remarks)
-        if desc: stop["description"] = desc
+        if pickup:      stop["pickup"] = pickup
+        if pickup_time: stop["pickup_time"] = pickup_time
+        if drop:        stop["drop"] = drop
+        if remarks:     stop["remarks"] = remarks
+        if desc:        stop["description"] = desc
         stops.append(stop)
-        prev_end = next_pos
     return stops
 
-
 def parse_terms(text: str) -> List[str]:
+    """Terms can be formatted as bullet lists (Jash, Nilesh) or as
+    blank-line-separated paragraphs (Sachin). Try both strategies and
+    prefer whichever produces more items."""
     m = re.search(r"Terms?\s*&\s*Conditions?\s*(.+?)(?:Thank you|$)",
                   text, re.IGNORECASE | re.DOTALL)
     if not m:
         return []
     block = m.group(1)
-    items = re.split(r"\n\s*(?:[e\*•◆\-–]|\d+\.)\s+", block)
-    out = []
-    for item in items:
+
+    # Strategy A: bullet-based (e / * / • / ◆ / - / – / numeric)
+    items_a = re.split(r"\n\s*(?:[e\*•◆\-–]|\d+\.)\s+", block)
+    parsed_a = []
+    for item in items_a:
         it = _clean(item)
         for sub in re.split(r"\s{2,}(?=[A-Z][a-z])", it):
             sub = _clean(sub)
-            if 15 < len(sub) < 600 and not sub.lower().startswith(("thank", "have a safe")):
-                out.append(sub)
-    return out
+            if 15 < len(sub) < 700 and not sub.lower().startswith(("thank", "have a safe")):
+                parsed_a.append(sub)
+
+    # Strategy B: blank-line paragraphs
+    paragraphs = re.split(r"\n\s*\n", block)
+    parsed_b = []
+    for para in paragraphs:
+        # Collapse multi-line paragraphs into one line
+        joined = _clean(para)
+        if 15 < len(joined) < 700 and not joined.lower().startswith(("thank", "have a safe")):
+            parsed_b.append(joined)
+
+    # Pick a strategy: prefer bullet-based (A) when it produced at least
+    # a few items — this is the well-structured Jash/Nilesh case. Only
+    # fall back to blank-line paragraph splitting (B) when A found almost
+    # nothing (the un-bulleted Sachin case).
+    if len(parsed_a) >= 5:
+        return parsed_a
+    return parsed_b if len(parsed_b) > len(parsed_a) else parsed_a
 
 
-def extract(pdf_path: str) -> dict:
+def _match_thumbs_to_stops(pdf_path: str, thumb_dir: str,
+                            pages_text: List[str], days: List[dict]) -> None:
+    """Assign extracted thumbnails to stops in-place by y-position on the
+    source page. TravClan PDFs have no text layer, so we use Tesseract's
+    per-word bounding boxes (via `image_to_data`) to find each stop
+    title's y-position, then attach each thumb to the closest stop title
+    above it on the same page."""
+    thumbs = extract_embedded_images(pdf_path, thumb_dir)
+    if not thumbs:
+        return
+
+    doc = fitz.open(pdf_path)
+
+    # 1) For each thumb, get its PDF-space y position (points). Extract
+    #    image xref → rect pairs by re-inspecting the source pages.
+    thumb_positions = []  # [{page, y_pdf, path}]
+    seen_paths = set()
+    for t in thumbs:
+        if t["path"] in seen_paths:
+            continue
+        page = doc[t["page"] - 1]
+        # get_images returns tuples; find the xref corresponding to this
+        # extraction index and get its placement rect
+        images = page.get_images(full=True)
+        if t["index"] < len(images):
+            xref = images[t["index"]][0]
+            try:
+                rects = page.get_image_rects(xref)
+                if rects:
+                    r = rects[0]
+                    thumb_positions.append({"page": t["page"], "y_pdf": r.y0, "path": t["path"]})
+                    seen_paths.add(t["path"])
+            except Exception:
+                pass
+
+    # 2) Per page, use Tesseract with per-word bounding boxes to find
+    #    stop title positions. A stop title is a line ending with
+    #    "| PRIVATE" or "| SIC" (or variants).
+    STOP_TOKENS = {"PRIVATE", "SIC", "TICKETS"}
+    page_titles = {}  # page_num → [(y_pdf, stop_ref)]
+
+    for page_num in range(1, len(doc) + 1):
+        page = doc[page_num - 1]
+        page_titles[page_num] = []
+        # Rasterize the page at 200 DPI (cheaper than 300 for positions)
+        pix = page.get_pixmap(dpi=200)
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+        # Group words into lines by (block_num, par_num, line_num)
+        lines = {}
+        for i, txt in enumerate(data["text"]):
+            if not txt.strip():
+                continue
+            key = (data["block_num"][i], data["par_num"][i], data["line_num"][i])
+            lines.setdefault(key, []).append({
+                "text": txt, "top": data["top"][i], "left": data["left"][i]
+            })
+        # DPI conversion for y: image_y / 200 * 72 = pdf_y (points)
+        # (200 DPI = image pixels per inch; 72 pt = 1 inch)
+        px_to_pt = 72.0 / 200.0
+        # Convert each line to a joined string + top position
+        for line_words in lines.values():
+            words = [w["text"] for w in line_words]
+            joined = " ".join(words)
+            # Does this line contain a stop-type marker?
+            if not any(tok in joined.upper() for tok in STOP_TOKENS):
+                continue
+            if "|" not in joined:  # must have the | before type
+                continue
+            y_pdf = min(w["top"] for w in line_words) * px_to_pt
+            page_titles[page_num].append((y_pdf, joined))
+        page_titles[page_num].sort(key=lambda x: x[0])
+
+    doc.close()
+
+    # 3) Build a flat list of all stops in document order
+    all_stops = []
+    for day in days:
+        for stop in day.get("stops", []):
+            all_stops.append(stop)
+
+    # 4) For each page, match its page_titles to stops in all_stops order.
+    #    We do a greedy match: walk through all_stops sequentially, pairing
+    #    each with the next page_titles entry (across all pages, in order).
+    all_page_titles = []  # (page, y_pdf, title_text) in document order
+    for pnum in sorted(page_titles):
+        for y, txt in page_titles[pnum]:
+            all_page_titles.append((pnum, y, txt))
+
+    # Zip: assume the k-th page_title corresponds to the k-th stop. This
+    # holds because both lists are in document order.
+    stop_positions = []  # [(page, y_pdf, stop_ref)]
+    for stop, (pnum, y, _) in zip(all_stops, all_page_titles):
+        stop_positions.append((pnum, y, stop))
+
+    # 5) For each thumb, find the stop on the same page with the closest
+    #    y_pdf above the thumb.
+    for tr in thumb_positions:
+        candidates = [(y, s) for (p, y, s) in stop_positions
+                      if p == tr["page"] and y <= tr["y_pdf"]]
+        if not candidates:
+            # No stop above on this page — try last stop on prior page
+            prior = [(p, y, s) for (p, y, s) in stop_positions if p < tr["page"]]
+            if prior:
+                _, _, best = prior[-1]
+                best.setdefault("thumbs", []).append(tr["path"])
+            continue
+        candidates.sort(key=lambda x: x[0])
+        best = candidates[-1][1]  # closest below
+        best.setdefault("thumbs", []).append(tr["path"])
+
+
+def extract(pdf_path: str, thumb_dir: Optional[str] = None) -> dict:
+    """OCR + parse a TravClan voucher into the renderer's data shape.
+    If thumb_dir is provided, embedded thumbnails are also extracted and
+    attached to stops by position."""
     pages = ocr_pdf(pdf_path)
     text = "\n".join(pages)
 
@@ -327,6 +526,12 @@ def extract(pdf_path: str) -> dict:
     days   = parse_days(text)
     terms  = parse_terms(text)
     guests = parse_guests(text)
+
+    if thumb_dir:
+        try:
+            _match_thumbs_to_stops(pdf_path, thumb_dir, pages, days)
+        except Exception:
+            pass  # thumbnails are best-effort; don't fail the whole extract
 
     dest = meta.get("destination", "") or ""
     guest_lead = meta.get("guest_lead", "")
@@ -356,11 +561,11 @@ def extract(pdf_path: str) -> dict:
             "careline":        "+91 88000 25030",
         },
         "_ocr_pages_raw": pages,
-        "_ocr_warnings":  _sanity_check(meta, hotels, days),
+        "_ocr_warnings":  _sanity_check(meta, hotels, days, guests, arrival, departure),
     }
 
 
-def _sanity_check(meta, hotels, days) -> List[str]:
+def _sanity_check(meta, hotels, days, guests, arrival, departure) -> List[str]:
     w = []
     if not meta.get("vendor_booking_id"):
         w.append("Booking ID not detected — verify and replace with Infinity Order ID.")
@@ -372,6 +577,21 @@ def _sanity_check(meta, hotels, days) -> List[str]:
         w.append("No hotels detected — verify (some vouchers legitimately have zero hotels).")
     if not days:
         w.append("No day-by-day itinerary detected — this is unusual.")
+
+    # Guest list vs Pax count sanity
+    import re as _re
+    if guests and meta.get("pax"):
+        m = _re.search(r"(\d+)\s*Adult", meta["pax"])
+        if m:
+            adult_pax = int(m.group(1))
+            if len(guests) < adult_pax:
+                w.append(f"Only {len(guests)} guest name(s) detected but Pax says {adult_pax} Adults — "
+                         f"the source voucher may have omitted the co-traveller names. Add them in the "
+                         f"'Guests' field below.")
+
+    if arrival and not departure:
+        w.append("Arrival detected but Departure missing — source may have an incomplete "
+                 "flight block; add departure details in the Arrival & Departure section.")
     return w
 
 
