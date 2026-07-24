@@ -34,8 +34,13 @@ REQUIRED = [
 ]
 
 
-def scan(pdf_path: str) -> tuple[bool, list[str]]:
-    """Return (passed, findings)."""
+def scan(pdf_path: str, vendor_booking_id: str = None) -> tuple[bool, list[str]]:
+    """Return (passed, findings).
+
+    If vendor_booking_id is provided (from the extractor), we look for it
+    verbatim in the rendered PDF — this catches the case where ops forgot
+    to replace TravClan's booking slug with the Infinity Order ID.
+    """
     findings = []
     doc = fitz.open(pdf_path)
     all_text = ""
@@ -49,6 +54,14 @@ def scan(pdf_path: str) -> tuple[bool, list[str]]:
     for token in REQUIRED:
         if token.lower() not in all_text:
             findings.append(f"❌ REQUIRED token missing: '{token}'")
+
+    # Vendor booking ID leak check — the extractor knows what the vendor
+    # slug was; if it's still in the output, ops didn't replace it.
+    if vendor_booking_id and vendor_booking_id.lower() in all_text:
+        findings.append(
+            f"❌ Vendor booking ID '{vendor_booking_id}' still present — "
+            f"replace with the Infinity Order ID before delivery."
+        )
 
     # Extra guardrail: no vendor code-slugs. TravClan slugs are 6-char
     # lowercase alphanumeric. To keep false positives low, we only flag

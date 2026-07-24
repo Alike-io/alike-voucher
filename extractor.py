@@ -365,8 +365,9 @@ def _parse_day_stops(chunk: str) -> List[dict]:
 
 def parse_terms(text: str) -> List[str]:
     """Terms can be formatted as bullet lists (Jash, Nilesh) or as
-    blank-line-separated paragraphs (Sachin). Try both strategies and
-    prefer whichever produces more items."""
+    blank-line-separated paragraphs (Sachin, Rajendra). Try both
+    strategies and pick the one that gives a clean, non-fragmented
+    result."""
     m = re.search(r"Terms?\s*&\s*Conditions?\s*(.+?)(?:Thank you|$)",
                   text, re.IGNORECASE | re.DOTALL)
     if not m:
@@ -383,26 +384,58 @@ def parse_terms(text: str) -> List[str]:
             if 15 < len(sub) < 700 and not sub.lower().startswith(("thank", "have a safe")):
                 parsed_a.append(sub)
 
-    # Strategy B: blank-line paragraphs
-    paragraphs = re.split(r"\n\s*\n", block)
-    parsed_b = []
-    for para in paragraphs:
-        # Collapse multi-line paragraphs into one line
-        joined = _clean(para)
-        if 15 < len(joined) < 700 and not joined.lower().startswith(("thank", "have a safe")):
-            parsed_b.append(joined)
+    # Strategy B: blank-line paragraphs, then merge fragments that OCR
+    # soft-broke apart. Rule: if the previous item ends with sentence-
+    # ending punctuation (. ! ?), start a new term; otherwise the current
+    # line is a continuation and gets merged into the previous.
+    raw_paras = [_clean(p) for p in re.split(r"\n\s*\n", block) if _clean(p)]
+    merged = []
+    for p in raw_paras:
+        if merged:
+            prev = merged[-1]
+            if prev.rstrip()[-1:] not in ".!?":
+                merged[-1] = f"{prev} {p}"
+                continue
+        merged.append(p)
 
-    # Pick a strategy: prefer bullet-based (A) when it produced at least
-    # a few items — this is the well-structured Jash/Nilesh case. Only
-    # fall back to blank-line paragraph splitting (B) when A found almost
-    # nothing (the un-bulleted Sachin case).
-    # Choose strategy: paragraph-based (B) wins if it produces >=50% more
-    # items than bullet-based (A) — this catches vouchers like Sachin and
-    # Rajendra where OCR doesn't preserve bullet glyphs. Otherwise trust
-    # the bullet-based split, provided it produced a reasonable count.
-    if len(parsed_b) >= max(5, len(parsed_a) * 1.5):
+    # Sanitize any residual vendor URLs (e.g. TravClan CDN links to
+    # third-party forms) — replace with a neutral note. Keep any Alike/
+    # official URLs untouched.
+    def _sanitize(s: str) -> str:
+        # Strip any URL that contains 'travclan' (case-insensitive)
+        return re.sub(r"https?://\S*travclan\S*", "(link available on request)",
+                      s, flags=re.IGNORECASE)
+
+    parsed_b = [_sanitize(x) for x in merged
+                if 15 < len(x) < 1200 and not x.lower().startswith(("thank", "have a safe"))]
+
+    # Also sanitize strategy A output
+    parsed_a = [_sanitize(x) for x in parsed_a]
+
+    # Choose whichever produces a reasonable, non-fragmented result. If
+    # both look sensible, prefer the one that produces MORE items (more
+    # terms extracted is generally better than fewer) but only if the
+    # winner is under a reasonable ceiling that suggests genuine content
+    # rather than over-fragmentation.
+    def looks_fragmented(items):
+        if not items:
+            return False
+        # Fragments: items that don't end with sentence-ending punctuation
+        no_end = sum(1 for x in items if x.rstrip()[-1:] not in ".!?:")
+        return no_end / len(items) > 0.35
+
+    a_ok = parsed_a and not looks_fragmented(parsed_a)
+    b_ok = parsed_b and not looks_fragmented(parsed_b)
+
+    if a_ok and b_ok:
+        # Both look clean; prefer the one with more items
+        return parsed_a if len(parsed_a) >= len(parsed_b) else parsed_b
+    if a_ok:
+        return parsed_a
+    if b_ok:
         return parsed_b
-    return parsed_a if len(parsed_a) >= 5 else parsed_b
+    # Both look fragmented — fall back to whichever has more content
+    return parsed_a if len(parsed_a) >= len(parsed_b) else parsed_b
 
 
 def _match_thumbs_to_stops(pdf_path: str, thumb_dir: str,
@@ -566,6 +599,7 @@ def extract(pdf_path: str, thumb_dir: Optional[str] = None) -> dict:
         },
         "_ocr_pages_raw": pages,
         "_ocr_warnings":  _sanity_check(meta, hotels, days, guests, arrival, departure),
+        "_vendor_booking_id": meta.get("vendor_booking_id", ""),
     }
 
 

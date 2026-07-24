@@ -79,6 +79,7 @@ with st.container(border=True):
                 data = extract(tmp_path, thumb_dir=thumb_dir)
                 st.session_state["warnings"] = data.pop("_ocr_warnings", [])
                 st.session_state["ocr_raw"]  = data.pop("_ocr_pages_raw", [])
+                st.session_state["vendor_booking_id"] = data.pop("_vendor_booking_id", "")
                 st.session_state["data"] = data
                 st.session_state["pdf_bytes"] = None
                 # Alert if extraction is essentially empty
@@ -144,6 +145,10 @@ with st.container(border=True):
     trip["booking_id"] = c1.text_input("Booking ID *(paste Infinity Order ID here)*",
                                        value=trip.get("booking_id", ""),
                                        help="Ops enters the Infinity Order ID; label on the voucher stays 'Booking ID'.")
+    vendor_bid = st.session_state.get("vendor_booking_id", "")
+    if vendor_bid and trip["booking_id"].strip().lower() == vendor_bid.strip().lower():
+        c1.warning(f"⚠ This is still the vendor's booking ID (`{vendor_bid}`). "
+                   f"Replace with the Infinity Order ID before generating.")
     trip["destination"] = c2.text_input("Destination", value=trip.get("destination", ""))
     trip["nights"]      = c3.number_input("Nights", min_value=0, max_value=60,
                                           value=int(trip.get("nights") or 0))
@@ -260,7 +265,8 @@ if generate:
         try:
             out_path = tempfile.mktemp(suffix=".pdf")
             render_voucher(data, out_path)
-            ok, findings = compliance_scan(out_path)
+            ok, findings = compliance_scan(out_path,
+                vendor_booking_id=st.session_state.get("vendor_booking_id") or None)
             with open(out_path, "rb") as f:
                 st.session_state["pdf_bytes"] = f.read()
             st.session_state["compliance"] = (ok, findings)
