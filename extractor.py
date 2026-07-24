@@ -286,7 +286,7 @@ def _parse_day_stops(chunk: str) -> List[dict]:
     A stop block runs from its title line to the next title line (or the
     end of the day chunk). Inside a block we look for optional Pickup +
     Drop, optional Remarks, and any descriptive prose."""
-    STOP_TYPE = r"PRIVATE|SIC|TICKETS\s*ONLY|SEAT[\s\-]IN[\s\-]COACH"
+    STOP_TYPE = r"PRIVATE|SIC|TICKETS\s*ONLY|SEAT[\s\-]IN[\s\-]COACH|\d+\s*Cab(?:\(s\))?"
     title_re = re.compile(rf"^([^\n]+?)\s*\|\s*({STOP_TYPE})[^\n]*$",
                           re.MULTILINE | re.IGNORECASE)
     matches = list(title_re.finditer(chunk))
@@ -396,9 +396,13 @@ def parse_terms(text: str) -> List[str]:
     # a few items — this is the well-structured Jash/Nilesh case. Only
     # fall back to blank-line paragraph splitting (B) when A found almost
     # nothing (the un-bulleted Sachin case).
-    if len(parsed_a) >= 5:
-        return parsed_a
-    return parsed_b if len(parsed_b) > len(parsed_a) else parsed_a
+    # Choose strategy: paragraph-based (B) wins if it produces >=50% more
+    # items than bullet-based (A) — this catches vouchers like Sachin and
+    # Rajendra where OCR doesn't preserve bullet glyphs. Otherwise trust
+    # the bullet-based split, provided it produced a reasonable count.
+    if len(parsed_b) >= max(5, len(parsed_a) * 1.5):
+        return parsed_b
+    return parsed_a if len(parsed_a) >= 5 else parsed_b
 
 
 def _match_thumbs_to_stops(pdf_path: str, thumb_dir: str,
@@ -439,7 +443,7 @@ def _match_thumbs_to_stops(pdf_path: str, thumb_dir: str,
     # 2) Per page, use Tesseract with per-word bounding boxes to find
     #    stop title positions. A stop title is a line ending with
     #    "| PRIVATE" or "| SIC" (or variants).
-    STOP_TOKENS = {"PRIVATE", "SIC", "TICKETS"}
+    STOP_TOKENS = {"PRIVATE", "SIC", "TICKETS", "CAB", "SEAT"}
     page_titles = {}  # page_num → [(y_pdf, stop_ref)]
 
     for page_num in range(1, len(doc) + 1):
